@@ -1,0 +1,4 @@
+name = "Crypt-RNCryptor"
+# badges = ["travis"]
+module_maker="ModuleBuildTiny"
+
