@@ -10,17 +10,17 @@ our $DefaultRNCryptorVersion = '3';
 our @SupportedRNCryptorVersions = qw(3);
 
 sub new {
-  my $class = shift;
-  my %opts = @_;
-  $opts{version} ||= $DefaultRNCryptorVersion;
-  foreach my $v (@SupportedRNCryptorVersions) {
-    if ($opts{version} eq $v) {
-      $Class = "Crypt::RNCryptor::V${v}";
-      require $Class;
-      return $Class->new(%opts);
+    my ($class, %opts) = @_;
+    $opts{version} ||= $DefaultRNCryptorVersion;
+    foreach my $v (@SupportedRNCryptorVersions) {
+        if ($opts{version} eq $v) {
+            my $Class = "Crypt::RNCryptor::V${v}";
+            eval "require $Class";
+            return $Class->new(%opts);
+        }
     }
-  }
-  confess "RNCryptor v$version is not supported.";
+    my $v = $opts{version};
+    confess "RNCryptor v$v is not supported.";
 }
 
 sub encrypt {
@@ -40,7 +40,7 @@ Crypt::RNCryptor - It's new $module
 
 =head1 SYNOPSIS
 
-    use Crypt::RNCryptor;
+        use Crypt::RNCryptor;
 
 =head1 DESCRIPTION
 

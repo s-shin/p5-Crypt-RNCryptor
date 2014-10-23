@@ -106,6 +106,12 @@ DISTRIBUTIONS
     requirements:
       Digest::MD5 2.00
       ExtUtils::MakeMaker 0
+  Crypt-OpenSSL-AES-0.02
+    pathname: T/TT/TTAR/Crypt-OpenSSL-AES-0.02.tar.gz
+    provides:
+      Crypt::OpenSSL::AES 0.02
+    requirements:
+      ExtUtils::MakeMaker 0
   Crypt-PBKDF2-0.142390
     pathname: A/AR/ARODLAND/Crypt-PBKDF2-0.142390.tar.gz
     provides:
