@@ -20,13 +20,13 @@ use constant {
     IV_SIZE => 16,
     HMAC_SIZE => 32,
     # PBKDF2
-    PBKDF2_ITERATIONS => 10000,
+    DEFAULT_PBKDF2_ITERATIONS => 10000,
     PBKDF2_OUTPUT_SIZE => 32,
 };
 
 use Class::Accessor::Lite (
     ro => [qw(
-        password
+        password pbkdf2_iterations
         encryption_key hmac_key
     )],
 );
@@ -36,19 +36,25 @@ sub new {
     if ($opts{password} && ($opts{encryption_key} || $opts{hmac_key})) {
         confess 'Cannot set the "password" option with "encryption_key" or "hmac_key" option.';
     }
+    if ($opts{pbkdf2_iterations}) {
+        confess 'v3.1 is not supported still yet.';
+    }
     bless {
         password => $opts{password},
         encryption_key => $opts{encryption_key},
         hmac_key => $opts{hmac_key},
+        pbkdf2_iterations => DEFAULT_PBKDF2_ITERATIONS,
     }, $class;
 }
 
 sub pbkdf2 {
-    $_[0]->{pbkdf2} ||= Crypt::PBKDF2->new(
+    my ($self, $password, $salt, $iterations) = @_;
+    $iterations ||= $self->pbkdf2_iterations;
+    Crypt::PBKDF2->new(
         hash_class => 'HMACSHA1',
-        iterations => PBKDF2_ITERATIONS,
+        iterations => $iterations,
         output_len => PBKDF2_OUTPUT_SIZE,
-    );
+    )->PBKDF2($salt, $password);
 }
 
 sub aes256cbc {
@@ -60,6 +66,11 @@ sub aes256cbc {
         -header => 'none',
         -cipher => 'Crypt::OpenSSL::AES',
     );
+}
+
+sub make_options {
+    my ($self, $use_password, $pbkdf2_iterations) = @_;
+    confess 'TODO';
 }
 
 sub encrypt {
@@ -75,9 +86,10 @@ sub encrypt_with_password {
     my $encryption_salt = $opts{encryption_salt} || Crypt::CBC->random_bytes(ENCRYPTION_SALT_SIZE);
     my $hmac_salt = $opts{hmac_salt} || Crypt::CBC->random_bytes(HMAC_SALT_SIZE);
     my $password = $opts{password} || $self->password;
+    my $pbkdf2_iterations = $opts{pbkdf2_iterations} || $self->pbkdf2_iterations;
 
-    my $encryption_key = $self->pbkdf2->PBKDF2($password, $encryption_salt);
-    my $hmac_key = $self->pbkdf2->PBKDF2($password, $hmac_salt);
+    my $encryption_key = $self->pbkdf2($password, $encryption_salt);
+    my $hmac_key = $self->pbkdf2($password, $hmac_salt);
 
     # Header = 3 || 1 || EncryptionSalt || HMACSalt || IV
     my $header = pack('CCa*a*a*', VERSION, OPTION_USE_PASSWORD, $encryption_salt, $hmac_salt, $iv);
@@ -129,15 +141,14 @@ sub decrypt_with_password {
         unpack($fmt, $header);
     };
 
-    my $encryption_key = $self->pbkdf2->PBKDF2($password, $encryption_salt);
-    my $hmac_key = $self->pbkdf2->PBKDF2($password, $hmac_salt);
-
-    # Plaintext = AES256Decrypt(Ciphertext, ModeCBC, IV, EncryptionKey)
-    my $plaintext = $self->aes256cbc($encryption_key, $iv)->decrypt($ciphertext);
-
-    # ComputedHMAC = HMAC(Header || Ciphertext, HMACKey, SHA-256)
+    # compare HMAC
+    my $hmac_key = $self->pbkdf2($password, $hmac_salt);
     my $computed_hmac = hmac_sha256(pack('a*a*', $header, $ciphertext), $hmac_key);
-    $computed_hmac eq $hmac ? $plaintext : undef;
+    die "HMAC is not matched.\n" unless $computed_hmac eq $hmac;
+
+    # decrypt
+    my $encryption_key = $self->pbkdf2($password, $encryption_salt);
+    $self->aes256cbc($encryption_key, $iv)->decrypt($ciphertext);
 }
 
 sub decrypt_with_keys {
@@ -158,16 +169,93 @@ sub decrypt_with_keys {
         unpack($fmt, $header);
     };
 
-    # Plaintext = AES256Decrypt(Ciphertext, ModeCBC, IV, EncryptionKey)
-    my $plaintext = $self->aes256cbc($encryption_key, $iv)->decrypt($ciphertext);
-
-    # ComputedHMAC = HMAC(Header || Ciphertext, HMACKey, SHA-256)
+    # compare HMAC
     my $computed_hmac = hmac_sha256(pack('a*a*', $header, $ciphertext), $hmac_key);
-    $computed_hmac eq $hmac ? $plaintext : undef;
+    die "HMAC is not matched.\n" unless $computed_hmac eq $hmac;
+
+    # Plaintext = AES256Decrypt(Ciphertext, ModeCBC, IV, EncryptionKey)
+    $self->aes256cbc($encryption_key, $iv)->decrypt($ciphertext);
 }
 
 1;
 
 __END__
 
-https://github.com/RNCryptor/RNCryptor-Spec/blob/master/RNCryptor-Spec-v3.md
+=encoding utf-8
+
+=head1 NAME
+
+Crypt::RNCryptor::V3 - Implementation of RNCyrptor v3.
+
+=head1 SYNOPSIS
+
+    use Crypt::RNCryptor::V3;
+
+    # generate password-based encryptor
+    $cryptor = Crypt::RNCryptor::V3->new(
+        password => 'secret password',
+    );
+
+    # generate key-based encryptor
+    $cryptor = Crypt::RNCryptor::V3->new(
+        encryption_key => '',
+        hmac_key => '',
+    );
+
+    # encrypt
+    $ciphertext = $cryptor->encrypt('plaintext');
+
+    # decrypt
+    $plaintext = $cryptor->decrypt($ciphertext);
+
+=head1 METHODS
+
+=head2 CLASS METHODS
+
+=over 4
+
+=item my $cryptor = Crypt::RNCryptor->new(%opts);
+
+Create a cryptor instance.
+
+    %opts = (
+        password => 'any length password',
+        pbkdf2_iterations => DEFAULT_PBKDF2_ITERATIONS,
+        # or
+        encryption_key => '32 length key',
+        hmac_key => '32 length key',
+    );
+
+=back
+
+=head2 INSTANCE METHODS
+
+=over 4
+
+=item $ciphertext = $cryptor->encrypt($plaintext)
+
+Encrypt plaintext with options.
+
+=item $plaintext = $cryptor->decrypt($ciphertext)
+
+Decrypt ciphertext with options.
+
+=back
+
+=head1 LICENSE
+
+Copyright (C) Shintaro Seki.
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=head1 AUTHOR
+
+Shintaro Seki E<lt>s2pch.luck@gmail.comE<gt>
+
+=head1 SEE ALSO
+
+L<RNCryptor-Spec-v3|https://github.com/RNCryptor/RNCryptor-Spec/blob/master/RNCryptor-Spec-v3.md>,
+L<RNCryptor-Spec-v3.1 Draft|https://github.com/RNCryptor/RNCryptor-Spec/blob/master/draft-RNCryptor-Spec-v3.1.md>
+
+=cut

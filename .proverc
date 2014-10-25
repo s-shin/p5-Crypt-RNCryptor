@@ -1,6 +1,6 @@
 --lib
---recurse t
 --color
 --failures
---timer
 --trap
+-P Pretty
+--verbose

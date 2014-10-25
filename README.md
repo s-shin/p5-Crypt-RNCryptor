@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/s-shin/p5-Crypt-RNCryptor.svg?branch=master)](https://travis-ci.org/s-shin/p5-Crypt-RNCryptor)
 # NAME
 
 Crypt::RNCryptor - Perl implementation of [RNCryptor](https://github.com/RNCryptor/RNCryptor)
