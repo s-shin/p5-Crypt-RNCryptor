@@ -104,6 +104,8 @@ Decrypt ciphertext with options.
 
 =head2 MODULE VARIABLES
 
+=over 4
+
 =item $Crypt::RNCryptor::DefaultRNCryptorVersion = '3'
 
 Default RNCryptor version.

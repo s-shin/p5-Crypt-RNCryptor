@@ -77,11 +77,3 @@ it under the same terms as Perl itself.
 # AUTHOR
 
 Shintaro Seki <s2pch.luck@gmail.com>
-
-# POD ERRORS
-
-Hey! **The above document had some coding errors, which are explained below:**
-
-- Around line 107:
-
-    '=item' outside of any '=over'
