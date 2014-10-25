@@ -1,5 +1,5 @@
 {
-   "abstract" : "It's new $module",
+   "abstract" : "Perl implementation of L<RNCryptor|https://github.com/RNCryptor/RNCryptor>",
    "author" : [
       "Shintaro Seki <s2pch.luck@gmail.com>"
    ],
@@ -42,6 +42,12 @@
       },
       "runtime" : {
          "requires" : {
+            "Carp" : "0",
+            "Class::Accessor::Lite" : "0",
+            "Crypt::CBC" : "0",
+            "Crypt::OpenSSL::AES" : "0",
+            "Crypt::PBKDF2" : "0",
+            "Digest::SHA" : "0",
             "perl" : "5.008001"
          }
       },
@@ -52,5 +58,16 @@
       }
    },
    "release_status" : "unstable",
+   "resources" : {
+      "bugtracker" : {
+         "web" : "https://github.com/s-shin/p5-Crypt-RNCryptor/issues"
+      },
+      "homepage" : "https://github.com/s-shin/p5-Crypt-RNCryptor",
+      "repository" : {
+         "type" : "git",
+         "url" : "git://github.com/s-shin/p5-Crypt-RNCryptor.git",
+         "web" : "https://github.com/s-shin/p5-Crypt-RNCryptor"
+      }
+   },
    "version" : "0.01"
 }

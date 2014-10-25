@@ -1,0 +1,6 @@
+--lib
+--recurse t
+--color
+--failures
+--timer
+--trap
